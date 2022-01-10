@@ -1,3 +1,5 @@
+import sqlite3
+
 from flask_restful import Resource, reqparse
 from models.hotel import HotelModel
 from flask_jwt_extended import jwt_required
@@ -5,9 +7,81 @@ from utils.message_helper import help_message_field_blank, database_unknown_erro
 
 
 class Hotels(Resource):
-    @staticmethod
-    def get():
-        return {'hoteis': [hotel.json() for hotel in HotelModel.query.all()]}, 200
+    def get(self):
+        connection = sqlite3.connect('banco.db')
+        cursor = connection.cursor()
+
+        args = self.get_params_args()
+        valid_args = self.get_valid_params_args(args)
+        parameters = self.normalize_path_params(**valid_args)
+
+        query = self.get_query(parameters.get('cidade') is not None)
+        values = tuple([parameters[key] for key in parameters])
+        result = cursor.execute(query, values)
+
+        hotels = []
+        for row in result:
+            hotels.append({
+                'hotel_id': row[0],
+                'nome': row[1],
+                'estrelas': row[2],
+                'diaria': row[3],
+                'cidade': row[4]
+            })
+        return hotels, 200
+
+    @classmethod
+    def get_query(cls, with_city: bool):
+        return "SELECT * FROM hoteis " \
+               "WHERE (estrelas > ? and estrelas < ?) " \
+               "and (diaria > ? and diaria < ?) " \
+               "{} LIMIT ? OFFSET ?".format("and cidade = ?" if with_city else "")
+
+    @classmethod
+    def get_params_args(cls):
+        path_params = reqparse.RequestParser()
+        path_params.add_argument('estrelas_min', type=float)
+        path_params.add_argument('estrelas_max', type=float)
+        path_params.add_argument('diaria_min', type=float)
+        path_params.add_argument('diaria_max', type=float)
+        path_params.add_argument('limit', type=int)
+        path_params.add_argument('offset', type=int)
+        path_params.add_argument('cidade', type=str)
+        return path_params.parse_args()
+
+    @classmethod
+    def get_valid_params_args(cls, args):
+        return {key: args[key] for key in args if args[key] is not None}
+
+    @classmethod
+    def normalize_path_params(cls,
+                              estrelas_min=0,
+                              estrelas_max=5,
+                              diaria_min=0,
+                              diaria_max=1000,
+                              limit=50,
+                              offset=0,
+                              cidade=None, **data):
+        if not cidade:
+            params = {
+                'estrelas_min': estrelas_min,
+                'estrelas_max': estrelas_max,
+                'diaria_min': diaria_min,
+                'diaria_max': diaria_max,
+                'limit': limit,
+                'offset': offset
+            }
+        else:
+            params = {
+                'estrelas_min': estrelas_min,
+                'estrelas_max': estrelas_max,
+                'diaria_min': diaria_min,
+                'diaria_max': diaria_max,
+                'cidade': cidade,
+                'limit': limit,
+                'offset': offset
+            }
+        return params
 
 
 class Hotel(Resource):
@@ -67,5 +141,3 @@ class Hotel(Resource):
             return {'message': 'Hotel not founded.'}, 404
         except:
             return database_unknown_error()
-
-

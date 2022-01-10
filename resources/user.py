@@ -39,8 +39,8 @@ class User(Resource):
 
 
 class UserRegister(Resource):
-    # /register
-    def post(self):
+    @classmethod
+    def post(cls):
         try:
             data = get_login_args()
             if UserModel.find_by_login(data[LOGIN_FIELD]):
