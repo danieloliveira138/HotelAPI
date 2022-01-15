@@ -3,11 +3,9 @@ from utils.constans import LOGIN_FIELD
 from flask_jwt_extended import jwt_required
 from flask import request, url_for
 from requests import post
-
+from utils.keys import MAILGUN_API_KEY, MAILGUN_DOMAIN
 
 USERS = 'users'
-MAILGUN_DOMAIN = 'sandboxac99cc97d20d40ac8bb02c018559022a.mailgun.org'
-MAILGUN_API_KEY = 'fbe479b62cafecdd3f0340ded3f17657-76f111c4-f0be4abc'
 FROM_TITLE = 'NO-REPLY'
 FROM_MAIL = 'no-reply@restapi.com'
 
